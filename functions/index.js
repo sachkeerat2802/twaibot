@@ -58,15 +58,11 @@ exports.tweet = functions.https.onRequest(async (request, response) => {
 
     const tweet = await openai.completions.create({
         model: "text-davinci-003",
-        prompt: "You are a wise and smart tech developer working in a top tech company. Your goal is to write a tweet about any one programming language like Python, Javascript, Java, Ruby, PHP, CSS, HTML, Go, Dart, XML, Swift, etc. and give an opinion on it in a very witty and sarcastic manner. Your tweet should be given in an active voice and be opinionated. You should use a hint of wit or sarcasm. You should Respond in under 300 characters and in three or less short sentences. Do not use emojis or abbreviations. Do not use quotation marks in the tweet",
+        prompt: "Write a tweet under 200 words that does not use any line-breaks or quotes about any one programming language. It should be witty and sarcastic. Examples of programming languages are Javascript, Python, C++, etc.",
         max_tokens: 64,
         temperature: 1.25,
     });
 
     const { data } = await refreshedClient.v2.tweet(tweet.choices[0].text);
     response.send(data);
-});
-
-exports.scheduledTweet = functions.pubsub.schedule("*/5 * * * *").onRun((context) => {
-    return exports.tweet();
 });
