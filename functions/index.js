@@ -1,6 +1,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const twAPI = require("twitter-api-v2").default;
+const { Configuration, OpenAIApi } = require("openai");
 require("dotenv").config();
 
 admin.initializeApp();
@@ -11,6 +12,12 @@ const twClient = new twAPI({
     clientId: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
 });
+
+const configuration = new Configuration({
+    organization: process.env.OPENAI_ORG,
+    apiKey: process.env.OPENAI_KEY,
+});
+const openai = new OpenAIApi(configuration);
 
 exports.auth = functions.https.onRequest(async (request, response) => {
     const { url, codeVerifier, state } = twClient.generateOAuth2AuthLink(callbackURL, { scope: ["tweet.read", "tweet.write", "users.read", "offline.access"] });
