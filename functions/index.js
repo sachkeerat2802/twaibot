@@ -56,17 +56,17 @@ exports.tweet = functions.https.onRequest(async (request, response) => {
     const { client: refreshedClient, accessToken, refreshToken: newRefreshToken } = await twClient.refreshOAuth2Token(refreshToken);
     await databaseReference.set({ accessToken, refreshToken: newRefreshToken });
 
-    try {
-        const tweet = await openai.completions.create({
-            model: "text-davinci-003",
-            prompt: "You are an incredibly wise and smart tech developer working in a top tech company. Your goal is to give a latest tech trend in the form of a tweet. Your tweet should be given in an active voice and be opinionated. You can use a hint of wit and sarcasm. Respond in under 300 characters and in three or less short sentences. Do not use emojis or abbreviations",
-            max_tokens: 64,
-            temperature: 1.25,
-        });
+    const tweet = await openai.completions.create({
+        model: "text-davinci-003",
+        prompt: "You are a wise and smart tech developer working in a top tech company. Your goal is to write a tweet about any one programming language like Python, Javascript, Java, Ruby, PHP, CSS, HTML, Go, Dart, XML, Swift, etc. and give an opinion on it in a very witty and sarcastic manner. Your tweet should be given in an active voice and be opinionated. You should use a hint of wit or sarcasm. You should Respond in under 300 characters and in three or less short sentences. Do not use emojis or abbreviations. Do not use quotation marks in the tweet",
+        max_tokens: 64,
+        temperature: 1.25,
+    });
 
-        const { data } = await refreshedClient.v2.tweet(tweet.choices[0].text);
-        response.send(data);
-    } catch (err) {
-        console.log(err);
-    }
+    const { data } = await refreshedClient.v2.tweet(tweet.choices[0].text);
+    response.send(data);
+});
+
+exports.scheduledTweet = functions.pubsub.schedule("*/5 * * * *").onRun((context) => {
+    return exports.tweet();
 });
