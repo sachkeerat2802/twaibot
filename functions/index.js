@@ -5,13 +5,12 @@ require("dotenv").config();
 
 admin.initializeApp();
 const databaseReference = admin.firestore().doc("tokens/twaibot");
+const callbackURL = "http://127.0.0.1:5000/twaibot/us-central1/callback";
 
 const twClient = new twAPI({
     clientId: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
 });
-
-const callbackURL = "http://127.0.0.1:5000/twaibot/us-central1/callback";
 
 exports.auth = functions.https.onRequest(async (request, response) => {
     const { url, codeVerifier, state } = twClient.generateOAuth2AuthLink(callbackURL, { scope: ["tweet.read", "tweet.write", "users.read", "offline.access"] });
@@ -39,10 +38,16 @@ exports.callback = functions.https.onRequest(async (request, response) => {
     });
 
     await databaseReference.set({ accessToken, refreshToken });
-
     const { data } = await loggedClient.v2.me();
-
     response.sendStatus(200);
 });
 
-exports.tweet = functions.https.onRequest((request, response) => {});
+exports.tweet = functions.https.onRequest(async (request, response) => {
+    const refreshToken = (await databaseReference.get()).data();
+
+    const { client: refreshedClient, accessToken, refreshToken: newRefreshToken } = await twClient.refreshOAuth2Token(refreshToken);
+
+    await databaseReference.set({ accessToken, refreshToken: newRefreshToken });
+
+    response.sendStatus(200);
+});
