@@ -21,10 +21,14 @@ exports.auth = functions.https.onRequest(async (request, response) => {
 exports.callback = functions.https.onRequest(async (request, response) => {
     const { state, code } = request.query;
     const datatbaseSnapshot = await databaseReference.get();
-    const { codeVerifier, state: storedState } = datatbaseSnapshot.data();
+    const { codeVerifier, state: sessionState } = datatbaseSnapshot.data();
 
-    if (state !== storedState) {
-        return response.status(400).send("Tokens do not match!");
+    if (!codeVerifier || !state || !sessionState || !code) {
+        return response.status(400).send("You denied the app or your session expired!");
+    }
+
+    if (state !== storsessionStateedState) {
+        return response.status(400).send("Stored tokens didn't match!");
     }
 
     const {
