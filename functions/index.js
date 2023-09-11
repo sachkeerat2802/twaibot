@@ -36,33 +36,41 @@ exports.callback = functions.https.onRequest(async (request, response) => {
         return response.status(400).send("Stored tokens didn't match!");
     }
 
-    const {
-        client: loggedClient,
-        accessToken,
-        refreshToken,
-    } = await twClient.loginWithOAuth2({
-        code,
-        codeVerifier,
-        redirectUri: callbackURL,
-    });
+    try {
+        const {
+            client: loggedClient,
+            accessToken,
+            refreshToken,
+        } = await twClient.loginWithOAuth2({
+            code,
+            codeVerifier,
+            redirectUri: callbackURL,
+        });
 
-    await databaseReference.set({ accessToken, refreshToken });
-    const { data } = await loggedClient.v2.me();
-    response.send(data);
+        await databaseReference.set({ accessToken, refreshToken });
+        const { data } = await loggedClient.v2.me();
+        response.send(data);
+    } catch (err) {
+        console.log(err);
+    }
 });
 
 exports.tweet = functions.https.onRequest(async (request, response) => {
-    const refreshToken = (await databaseReference.get()).data().refreshToken;
-    const { client: refreshedClient, accessToken, refreshToken: newRefreshToken } = await twClient.refreshOAuth2Token(refreshToken);
-    await databaseReference.set({ accessToken, refreshToken: newRefreshToken });
+    try {
+        const refreshToken = (await databaseReference.get()).data().refreshToken;
+        const { client: refreshedClient, accessToken, refreshToken: newRefreshToken } = await twClient.refreshOAuth2Token(refreshToken);
+        await databaseReference.set({ accessToken, refreshToken: newRefreshToken });
 
-    const tweet = await openai.completions.create({
-        model: "text-davinci-003",
-        prompt: "Write a tweet under 200 words that does not use any line-breaks or quotes about any one programming language. It should be witty and sarcastic. Examples of programming languages are Javascript, Python, C++, etc.",
-        max_tokens: 64,
-        temperature: 1.25,
-    });
+        const tweet = await openai.completions.create({
+            model: "text-davinci-003",
+            prompt: "Write a tweet under 200 words that does not use any line-breaks or quotes about any one programming language. It should be witty and sarcastic. Examples of programming languages are Javascript, Python, C++, etc.",
+            max_tokens: 64,
+            temperature: 1.25,
+        });
 
-    const { data } = await refreshedClient.v2.tweet(tweet.choices[0].text);
-    response.send(data);
+        const { data } = await refreshedClient.v2.tweet(tweet.choices[0].text);
+        response.send(data);
+    } catch (err) {
+        console.log(err);
+    }
 });
