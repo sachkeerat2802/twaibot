@@ -39,7 +39,7 @@ exports.callback = functions.https.onRequest(async (request, response) => {
 
     await databaseReference.set({ accessToken, refreshToken });
     const { data } = await loggedClient.v2.me();
-    response.sendStatus(200);
+    response.send(data);
 });
 
 exports.tweet = functions.https.onRequest(async (request, response) => {
@@ -49,5 +49,6 @@ exports.tweet = functions.https.onRequest(async (request, response) => {
 
     await databaseReference.set({ accessToken, refreshToken: newRefreshToken });
 
-    response.sendStatus(200);
+    const { data } = await refreshedClient.v2.me();
+    response.send(data);
 });
