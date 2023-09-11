@@ -1,7 +1,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const twAPI = require("twitter-api-v2").default;
-const { Configuration, OpenAIApi } = require("openai");
+const OpenAI = require("openai");
 require("dotenv").config();
 
 admin.initializeApp();
@@ -13,11 +13,9 @@ const twClient = new twAPI({
     clientSecret: process.env.CLIENT_SECRET,
 });
 
-const configuration = new Configuration({
-    organization: process.env.OPENAI_ORG,
+const openai = new OpenAI({
     apiKey: process.env.OPENAI_KEY,
 });
-const openai = new OpenAIApi(configuration);
 
 exports.auth = functions.https.onRequest(async (request, response) => {
     const { url, codeVerifier, state } = twClient.generateOAuth2AuthLink(callbackURL, { scope: ["tweet.read", "tweet.write", "users.read", "offline.access"] });
@@ -34,7 +32,7 @@ exports.callback = functions.https.onRequest(async (request, response) => {
         return response.status(400).send("You denied the app or your session expired!");
     }
 
-    if (state !== storsessionStateedState) {
+    if (state !== sessionState) {
         return response.status(400).send("Stored tokens didn't match!");
     }
 
@@ -58,21 +56,17 @@ exports.tweet = functions.https.onRequest(async (request, response) => {
     const { client: refreshedClient, accessToken, refreshToken: newRefreshToken } = await twClient.refreshOAuth2Token(refreshToken);
     await databaseReference.set({ accessToken, refreshToken: newRefreshToken });
 
-    const tweet = await openai.createCompletion("text-davinci-003", {
-        prompt: ```You are an incredibly wise and smart tech developer working in a top tech company. Your goal is to give a latest tech trend in the form of a tweet. 
-            
-        % RESPONSE TONE:
-        - Your tweet should be given in an active voice and be opinionated
-        - Your tone should be serious w/ a hint of wit and sarcasm
-                    
-         % RESPONSE FORMAT:
-        - Respond in under 300 characters
-        - Respond in three or less short sentences
-        - Do not use emojis or abbreviations```,
-        max_tokens: 64,
-        temperature: 1.25,
-    });
+    try {
+        const tweet = await openai.completions.create({
+            model: "text-davinci-003",
+            prompt: "You are an incredibly wise and smart tech developer working in a top tech company. Your goal is to give a latest tech trend in the form of a tweet. Your tweet should be given in an active voice and be opinionated. You can use a hint of wit and sarcasm. Respond in under 300 characters and in three or less short sentences. Do not use emojis or abbreviations",
+            max_tokens: 64,
+            temperature: 1.25,
+        });
 
-    const { data } = await refreshedClient.v2.tweet(tweet.data.choices[0].text);
-    response.send(data);
+        const { data } = await refreshedClient.v2.tweet(tweet.choices[0].text);
+        response.send(data);
+    } catch (err) {
+        console.log(err);
+    }
 });
