@@ -43,12 +43,10 @@ exports.callback = functions.https.onRequest(async (request, response) => {
 });
 
 exports.tweet = functions.https.onRequest(async (request, response) => {
-    const refreshToken = (await databaseReference.get()).data();
-
+    const refreshToken = (await databaseReference.get()).data().refreshToken;
     const { client: refreshedClient, accessToken, refreshToken: newRefreshToken } = await twClient.refreshOAuth2Token(refreshToken);
-
     await databaseReference.set({ accessToken, refreshToken: newRefreshToken });
 
-    const { data } = await refreshedClient.v2.me();
+    const { data } = await refreshedClient.v2.tweet("testing!!!");
     response.send(data);
 });
